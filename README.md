@@ -36,7 +36,7 @@ To install Automated Backups, follow these steps:
 6. Replace the .env placeholder values with your own configuration.
 7. Test the script using following command: `python backup.py`
 
-**** Please note: Ensure the account you used to generate the panel api key does not own any of the servers you wish to be backed up. ****
+*** Please note: Ensure the account you used to generate the panel api key does not own any of the servers you wish to be backed up. ***
 
 ## Setting Up a Cron Job
 
@@ -55,7 +55,7 @@ This script is provided as-is without any warranty. Use it at your own risk. The
 
 ## Support
 
-If you encounter any issues or have questions about the application, `[please visit my discord](https://discord.gg/ngnKtNdv)`
+If you encounter any issues or have questions about the application, [please visit my discord: ](https://discord.gg/ngnKtNdv)
 
 
 
