@@ -35,7 +35,7 @@ To install Automated Backups, follow these steps:
 4. rename the example env file: `mv .env.example .env`
 5. Generate a client API key on your pterodactyl panel: `Account Settings > API Credentials > Create`
 6. Replace the .env placeholder values with your own configuration.
-7. Test the script using following command: `python backup.py`
+7. Test the script using following command: `python3 backup.py`
 
 `*** Please note: Ensure the account you used to generate the panel api key does not own any of the servers you wish to be backed up. ***`
 
