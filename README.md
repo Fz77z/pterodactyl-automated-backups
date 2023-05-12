@@ -1,4 +1,5 @@
-# Pterodactyl Automated Backups
+# Pterodactyl Automated Backups ![image](https://github.com/Fz77z/pterodactyl-automated-backups/assets/90436534/7b33995b-2241-4725-aa39-b057f13cd3ab)
+
 
 ## Overview
 
