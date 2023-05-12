@@ -92,7 +92,3 @@ def make_request():
             logging.error("Max retries exceeded.")
 
     return None
-
-
-
-make_request()
