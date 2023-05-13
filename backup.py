@@ -8,10 +8,8 @@ from dotenv import load_dotenv
 
 # Configure the logging to output to a file
 log_file = 'backup.log'
-
 log_format = '%(levelname)s - %(message)s'
 logging.basicConfig(filename=log_file, level=logging.INFO, format=log_format, filemode='a')  # 'a' stands for append
-
 
 log_format = '%(levelname)s - %(message)s'
 logging.basicConfig(level=logging.INFO, format=log_format)
@@ -25,12 +23,10 @@ logger.addHandler(handler)
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 BACKUPS_URL = os.getenv("BACKUPS_URL")
+SEND_EMAILS = os.getenv("SEND_EMAILS", "True")  # Default to "True" if not set
 
-def backup_servers(server_ids):
-    failed_servers = []
-    
-    if not server_ids:
-        logger.error("ERROR could not find servers eligible for backing up.")
+def notify_error():
+    if SEND_EMAILS.lower() == "true":
         send_email(
             os.getenv("EMAIL_SUBJECT"),
             os.getenv("EMAIL_BODY"),
@@ -38,6 +34,13 @@ def backup_servers(server_ids):
             os.getenv("FROM_EMAIL"),
             os.getenv("FROM_PASSWORD"), 
         )
+
+def backup_servers(server_ids):
+    failed_servers = []
+    
+    if not server_ids:
+        logger.error("ERROR could not find servers eligible for backing up.")
+        notify_error()
         return
     
     headers = {"Authorization": API_KEY}
@@ -72,22 +75,10 @@ def retry_failed_servers(failed_servers, headers):
                 time.sleep(5)
             else:
                 logger.error(f"Retry failed for server {server_id}. Error code: {retry.status_code}")
-                send_email(
-                    os.getenv("EMAIL_SUBJECT"),
-                    os.getenv("EMAIL_BODY"),
-                    os.getenv("TO_EMAIL"),
-                    os.getenv("FROM_EMAIL"),
-                    os.getenv("FROM_PASSWORD"), 
-                ) 
+                notify_error() 
         except requests.exceptions.RequestException as e:
             logger.error(f"An error occurred while retrying the backup request for server {server_id}: {str(e)}")
-            send_email(
-                os.getenv("EMAIL_SUBJECT"),
-                os.getenv("EMAIL_BODY"),
-                os.getenv("TO_EMAIL"),
-                os.getenv("FROM_EMAIL"),
-                os.getenv("FROM_PASSWORD"), 
-            ) 
+            notify_error() 
 
 server_ids = make_request()
 backup_servers(server_ids)
