@@ -5,26 +5,37 @@
 
 ## Overview
 
-Pterodactyl Automatic Backups is a Python script that automates the process of creating backups for all servers connected to your panel. It utilizes the Pterodactyl API to initiate backups for multiple servers consecutively. In case of backup failures, it provides a retry mechanism and sends email alerts to notify the administrator.
+Pterodactyl Automated Backups is a Python script that automates the process of creating backups for all servers connected to your panel. It utilizes the Pterodactyl API to initiate backups for multiple servers consecutively. In case of backup failures, it provides a retry mechanism and sends email alerts to notify the administrator.
 
 ## Features
 
-- **Automated backups:** Supports automatic backups for Pterodactyl servers.
+- **Fully-automated-backups:** Supports automated backups for all servers connected to your pterodactyl panel.
 - **Reliable:** Handles backup failures and retries the process for failed servers.
 - **User-friendly:** Easy to set up and use, minimal technical expertise required.
-- **email-support:** Sends email alerts to notify the administrator about backup failures.
-- **logging:** Logs backup events and errors to a file for easy troubleshooting.
-- **any type:** Supports both s3 and filesystem backups.
+- **Email-support:** Sends optional email alerts to notify the administrator about backup failures.
+- **Detailed-logging:** Logs backup events and errors to a file for easy troubleshooting.
+- **Any-type:** Supports both s3 and filesystem backups.
 
 
 ## Prerequisites
 
 Before using this script, ensure that the following dependencies are installed:
 
-1. Python 3.x
-2. requests module
-3. dotenv module
-4. logging module
+# Python3
+Python 3.x: This script requires Python 3.x. You can check your Python version by running python3 --version in your terminal. If Python 3.x is not installed, you can install it via:
+
+`sudo apt update && sudo apt install python3`
+
+
+# Installing Modules
+
+If pip is not installed, you can install it via: `sudo apt install python3-pip`
+
+1. `requests`: A Python module used for making HTTP requests.
+2. `python-dotenv`: A Python module used for handling .env files.
+you can install them using pip via : `pip install requests && pip install python-dotenv`
+
+Note: The `os`, `time`, `json`, `logging`, and `http` modules are part of the Python 3 Standard Library and are included with Python by default.
 
 
 ## Installation
