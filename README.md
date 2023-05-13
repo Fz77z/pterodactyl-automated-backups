@@ -33,7 +33,7 @@ If pip is not installed, you can install it via: `sudo apt install python3-pip`
 
 1. `requests`: A Python module used for making HTTP requests.
 2. `python-dotenv`: A Python module used for handling .env files.
-you can install them using pip via : `pip install requests && pip install python-dotenv`
+you can install them using pip via :<br> `pip install requests && pip install python-dotenv`
 
 Note: The `os`, `time`, `json`, `logging`, and `http` modules are part of the Python 3 Standard Library and are included with Python by default.
 
