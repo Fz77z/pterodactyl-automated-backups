@@ -1,72 +1,94 @@
 import os
 import time
+import json
 import logging
+from logging.handlers import RotatingFileHandler
 import requests
 from dotenv import load_dotenv
+from http import HTTPStatus
 
-# Load environment variables
+# Constants
+LOG_FILE = 'backup.log'
+LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
+MAX_LOG_FILE_BYTES = 500000
+BACKUP_COUNT = 2
+
+# Load and validate environment variables
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 GET_URL = os.getenv("GET_URL")
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", 5))
+RETRY_DELAY_SECS = int(os.getenv("RETRY_DELAY_SECS", 15))
+
+if not API_KEY:
+    raise ValueError("API key not found. Please set the API_KEY environment variable.")
+if not GET_URL:
+    raise ValueError("URL not found. Please set the GET_URL environment variable.")
 
 # Configure logging
-log_file = 'backup.log'
-if os.path.exists(log_file):
-    os.remove(log_file)
-
-log_format = '%(levelname)s - %(message)s'
-logging.basicConfig(level=logging.INFO, format=log_format)
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
-handler = logging.FileHandler(log_file)
+handler = RotatingFileHandler(LOG_FILE, maxBytes=MAX_LOG_FILE_BYTES, backupCount=BACKUP_COUNT)
 handler.setLevel(logging.INFO)
-handler.setFormatter(logging.Formatter(log_format))
+handler.setFormatter(logging.Formatter(LOG_FORMAT))
 logger.addHandler(handler)
 
-def validate_env_vars(api_key, url):
-    if api_key is None:
-        logger.error("API key not found. Please set the API_KEY environment variable.")
-        raise ValueError("API key not found")
-    if url is None:
-        logger.error("URL not found. Please set the GET_URL environment variable.")
-        raise ValueError("URL not found")
+def get_session(api_key):
+    session = requests.Session()
+    session.headers.update({"Authorization": f"Bearer {api_key}"})
+    return session
 
-def get_response(url, headers, max_retries=5, retry_delay_secs=15):
-    for retry in range(max_retries):
+def get_response(session):
+    for retry in range(MAX_RETRIES):
         try:
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200:
-                return response
+            response = session.get(GET_URL)
+            if response.status_code == HTTPStatus.OK:
+                if 'application/json' in response.headers['Content-Type']:
+                    return response
+                else:
+                    logger.error("Invalid API Key - received non-JSON response")
+                    raise ValueError("Invalid API Key")
             else:
-                logger.error(f"Error: {response.status_code} - {response.reason}")
+                logger.error(f"Error: {response.status_code} - {HTTPStatus(response.status_code).phrase}")
+                raise requests.exceptions.HTTPError(response.status_code)
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
             logger.error(f"Network Error: {str(e)}")
         except requests.exceptions.RequestException as e:
             logger.error(f"Request Exception: {str(e)}")
 
-        if retry < max_retries - 1:
-            logger.info(f"Retrying in {retry_delay_secs} seconds...")
-            time.sleep(retry_delay_secs)
+        if retry < MAX_RETRIES - 1:
+            logger.info(f"Retrying in {RETRY_DELAY_SECS} seconds...")
+            time.sleep(RETRY_DELAY_SECS)
         else:
-            logger.error("Max retries exceeded.")
-            return None
+            raise requests.exceptions.RetryError("Max retries exceeded.")
+
+
 
 def process_response(response):
-    data = response.json()
-    server_identifiers = set()
-    for item in data['data']:
-        identifier = item['attributes']['identifier']
-        server_identifiers.add(identifier)
-    logger.info(f"Server identifiers: {server_identifiers}")
-    return server_identifiers
+    try:
+        if 'application/json' in response.headers['Content-Type']:
+            data = response.json()
+            server_identifiers = {item['attributes']['identifier'] for item in data['data']}
+            logger.info(f"Server identifiers: {server_identifiers}")
+            return server_identifiers
+        else:
+            logger.error("Received non-JSON response")
+            raise ValueError("Received non-JSON response")
+    except (ValueError, KeyError):
+        logger.error("Error processing response")
+        raise
+    except json.JSONDecodeError:
+        logger.error("Error decoding JSON response")
+        raise
 
 def main():
-    validate_env_vars(API_KEY, GET_URL)
-    headers = {"Authorization": API_KEY}
-    response = get_response(GET_URL, headers)
-    if response:
+    with get_session(API_KEY) as session:
+        response = get_response(session)
         return process_response(response)
-    else:
-        return None
 
 if __name__ == "__main__":
-    main()
+    try:
+        result = main()
+        logger.info(f"Request executed successfully. Result: {result}")
+    except Exception as e:
+        logger.error(f"Script execution failed: {e}")

@@ -27,6 +27,9 @@ SEND_EMAILS = os.getenv("SEND_EMAILS", "True")  # Default to "True" if not set
 
 def notify_error():
     if SEND_EMAILS.lower() == "true":
+        if not (os.getenv("EMAIL_SUBJECT") and os.getenv("EMAIL_BODY") and os.getenv("TO_EMAIL") and os.getenv("FROM_EMAIL") and os.getenv("FROM_PASSWORD")):
+            logger.error("One or more email environment variables are not set. Can't send notification email.")
+            return
         send_email(
             os.getenv("EMAIL_SUBJECT"),
             os.getenv("EMAIL_BODY"),
@@ -34,6 +37,17 @@ def notify_error():
             os.getenv("FROM_EMAIL"),
             os.getenv("FROM_PASSWORD"), 
         )
+
+if not API_KEY:
+    logger.error("API_KEY environment variable not set. Can't proceed without it.")
+    notify_error()
+    exit(1)
+
+if not BACKUPS_URL:
+    logger.error("BACKUPS_URL environment variable not set. Can't proceed without it.")
+    notify_error()
+    exit(1)
+
 
 def backup_servers(server_ids):
     failed_servers = []
@@ -52,7 +66,7 @@ def backup_servers(server_ids):
             
             if backup.status_code == 200:
                 logger.info(f"Backup succeeded for server {server_id}. Status code: {backup.status_code}")
-                time.sleep(3)
+                time.sleep(2)
             else:
                 failed_servers.append(server_id)
                 logger.error(f"Backup failed for server {server_id}. Error code: {backup.status_code}")
