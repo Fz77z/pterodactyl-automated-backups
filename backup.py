@@ -8,8 +8,10 @@ from dotenv import load_dotenv
 
 # Configure the logging to output to a file
 log_file = 'backup.log'
-if os.path.exists(log_file):
-    os.remove(log_file)
+
+log_format = '%(levelname)s - %(message)s'
+logging.basicConfig(filename=log_file, level=logging.INFO, format=log_format, filemode='a')  # 'a' stands for append
+
 
 log_format = '%(levelname)s - %(message)s'
 logging.basicConfig(level=logging.INFO, format=log_format)
