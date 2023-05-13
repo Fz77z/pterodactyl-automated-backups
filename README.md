@@ -1,4 +1,4 @@
-![image](https://github.com/Fz77z/pterodactyl-automated-backups/assets/90436534/7b33995b-2241-4725-aa39-b057f13cd3ab)
+![image](https://github.com/Fz77z/pterodactyl-automated-backups/assets/90436534/24af539c-eee8-49de-a598-3d3ea1f1f11f)
 
 # Pterodactyl Automated Backups 
 
