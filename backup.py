@@ -7,8 +7,17 @@ from alert import send_email
 from dotenv import load_dotenv
 
 # Configure the logging to output to a file
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s', filename='backup.log')
+log_file = 'backup.log'
+if os.path.exists(log_file):
+    os.remove(log_file)
+
+log_format = '%(levelname)s - %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_format)
 logger = logging.getLogger(__name__)
+handler = logging.FileHandler(log_file)
+handler.setLevel(logging.INFO)
+handler.setFormatter(logging.Formatter(log_format))
+logger.addHandler(handler)
 
 # Load environment variables
 load_dotenv()
