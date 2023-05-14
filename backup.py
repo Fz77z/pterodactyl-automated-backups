@@ -3,8 +3,8 @@ import time
 import logging
 import requests
 from api_request import main as make_request
-from alert import send_email
 from dotenv import load_dotenv
+from alert import EmailAlert
 
 # Configure the logging to output to a file
 log_file = 'backup.log'
@@ -21,21 +21,27 @@ logger.addHandler(handler)
 
 # Load environment variables
 load_dotenv()
-API_KEY = os.getenv("API_KEY")
+API_KEY = f"Bearer {os.getenv('API_KEY')}"
 BACKUPS_URL = os.getenv("BACKUPS_URL")
 SEND_EMAILS = os.getenv("SEND_EMAILS", "True")  # Default to "True" if not set
 
+# Instantiate EmailAlert object
+email_alert = EmailAlert(
+    os.getenv("FROM_EMAIL"),
+    os.getenv("FROM_PASSWORD"),
+    os.getenv("SMTP_SERVER"),
+    os.getenv("SMTP_PORT")
+)
+
 def notify_error():
     if SEND_EMAILS.lower() == "true":
-        if not (os.getenv("EMAIL_SUBJECT") and os.getenv("EMAIL_BODY") and os.getenv("TO_EMAIL") and os.getenv("FROM_EMAIL") and os.getenv("FROM_PASSWORD")):
+        if not (os.getenv("EMAIL_SUBJECT") and os.getenv("EMAIL_BODY") and os.getenv("TO_EMAIL")):
             logger.error("One or more email environment variables are not set. Can't send notification email.")
             return
-        send_email(
+        email_alert.send(
             os.getenv("EMAIL_SUBJECT"),
             os.getenv("EMAIL_BODY"),
-            os.getenv("TO_EMAIL"),
-            os.getenv("FROM_EMAIL"),
-            os.getenv("FROM_PASSWORD"), 
+            os.getenv("TO_EMAIL")
         )
 
 if not API_KEY:
