@@ -106,14 +106,35 @@ def backup_servers(server_ids):
     for server_id in server_ids:
         try:
             url = f"{SERVERS_URL}{server_id}/backups"
-            backup = requests.post(url, data='', headers=headers)
-            
-            if backup.status_code == 200:
-                logger.info(f"Backup succeeded for server {server_id}. Status code: {backup.status_code}")
+            response = requests.post(url, data='', headers=headers)
+            if response.status_code == 200:
+                backup = response.json()
+                backup_uuid = backup['attributes']['uuid']
+
+                logger.info(f"backup started for server {server_id}")
+
+                if POST_BACKUP_SCRIPT:
+                    # we should only run this when the backup has been finished....
+                    # this will prevent that the backups are made concurrently, thats OK, maybe it is 
+                    # even better as it reduces overall load 
+                    logger.info(f"waiting for backup to finish...")
+                    while True:
+                        response = requests.get(f'{url}/{backup_uuid}', data='', headers=headers)
+
+                        if response.status_code == 200:
+                            if response.json()['attributes']['completed_at']:                                
+                                logger.info("running post-backup script")
+                                run_script(server_id, backup_uuid)
+                                break
+                        else:
+                            logger.error(f"failed to get backup info, giving up to run post-backup script. Error code: {response.status_code} {response.text}")
+                            break
+
+                        time.sleep(10)
                 time.sleep(2)
             else:
                 failed_servers.append(server_id)
-                logger.error(f"Backup failed for server {server_id}. Error code: {backup.status_code}")
+                logger.error(f"Backup failed for server {server_id}. Error code: {response.status_code} {response.text}")
                 time.sleep(30)
         except requests.exceptions.RequestException as e:
             logger.error(f"An error occurred while making the backup request for server {server_id}: {str(e)}")
@@ -138,18 +159,12 @@ def retry_failed_servers(failed_servers, headers):
             logger.error(f"An error occurred while retrying the backup request for server {server_id}: {str(e)}")
             notify_error() 
 
-def run_script(server_ids):
-    for server_id in server_ids:
-        exit_status = os.system(f"sh {POST_BACKUP_SCRIPT} {server_id}") 
-        if exit_status == 0:
-            logger.info(f"post backup script: success")
-        else:
-            logger.error(f"post backup script: failed with exit status {exit_status}")
-
+def run_script(server_id, backup_uuid):
+    exit_status = os.system(f"sh {POST_BACKUP_SCRIPT} {server_id} {backup_uuid}") 
+    if exit_status > 0:
+        logger.error(f"post backup script: failed with exit status {exit_status}")
 
 (server_ids, backup_limits) = make_request()
 remove_old_backups(backup_limits)
 backup_servers(server_ids)
 
-if POST_BACKUP_SCRIPT:
-    run_script(server_ids)
