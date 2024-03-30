@@ -70,7 +70,9 @@ def process_response(response):
             data = response.json()
             server_identifiers = {item['attributes']['identifier'] for item in data['data']}
             logger.info(f"Server identifiers: {server_identifiers}")
-            return server_identifiers
+            backup_limits = {item['attributes']['identifier']: item['attributes']['feature_limits']['backups'] for item in data['data']}
+           
+            return (server_identifiers, backup_limits)
         else:
             logger.error("Received non-JSON response")
             raise ValueError("Received non-JSON response")

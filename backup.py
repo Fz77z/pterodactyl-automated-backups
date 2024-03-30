@@ -22,7 +22,7 @@ logger.addHandler(handler)
 # Load environment variables
 load_dotenv()
 API_KEY = f"Bearer {os.getenv('API_KEY')}"
-BACKUPS_URL = os.getenv("BACKUPS_URL")
+SERVERS_URL = os.getenv("SERVERS_URL")
 SEND_EMAILS = os.getenv("SEND_EMAILS", "True")  # Default to "True" if not set
 
 # Instantiate EmailAlert object
@@ -49,11 +49,48 @@ if not API_KEY:
     notify_error()
     exit(1)
 
-if not BACKUPS_URL:
-    logger.error("BACKUPS_URL environment variable not set. Can't proceed without it.")
+if not SERVERS_URL:
+    logger.error("SERVERS_URL environment variable not set. Can't proceed without it.")
     notify_error()
     exit(1)
 
+# remove backups when limits reached
+def remove_old_backups(backup_limits):
+    logger.info(f"Backup limits: {backup_limits}")
+    headers = {"Authorization": API_KEY}
+    for server_id in backup_limits:
+        try:
+            url = f"{SERVERS_URL}{server_id}/backups"
+            response = requests.get(url, data='', headers=headers)
+             
+            if response.status_code == 200:
+                backups = sorted(response.json()['data'], key=lambda b: b['attributes']['created_at'])
+
+                if len(backups) >= backup_limits[server_id]:
+                    # backup limit reached
+                    # remove oldest N backups
+                    N = len(backups) - backup_limits[server_id] + 1
+                    
+                    for i in range(0,N):
+                        # delete oldest backup
+                        url = f"{SERVERS_URL}{server_id}/backups/{backups[i]['attributes']['uuid']}"
+                        logger.info(f"deleting backup: \"{backups[i]['attributes']['name']}\", server: {server_id}")
+
+                        response = requests.delete(url, headers=headers)
+                        if response.status_code == 204:
+                            logger.info("deleting backup: success")
+                        else:
+                            logger.info(f"deleting backup: failed with status {response.status_code}")
+
+                        time.sleep(2)
+                else:
+                    logger.info(f"nothing to delete, server {server_id}")
+            else:
+                logger.error(f"Getting backup info failed for server {server_id}. Error code: {response.status_code}")
+                time.sleep(30)
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"An error occurred while deleting backups from server {server_id}: {str(e)}")
 
 def backup_servers(server_ids):
     failed_servers = []
@@ -67,7 +104,7 @@ def backup_servers(server_ids):
 
     for server_id in server_ids:
         try:
-            url = f"{BACKUPS_URL}{server_id}/backups"
+            url = f"{SERVERS_URL}{server_id}/backups"
             backup = requests.post(url, data='', headers=headers)
             
             if backup.status_code == 200:
@@ -87,7 +124,7 @@ def backup_servers(server_ids):
 def retry_failed_servers(failed_servers, headers):
     for server_id in failed_servers:
         try:
-            url = f"{BACKUPS_URL}{server_id}/backups"
+            url = f"{SERVERS_URL}{server_id}/backups"
             retry = requests.post(url, data='', headers=headers)
             
             if retry.status_code == 200:
@@ -100,5 +137,6 @@ def retry_failed_servers(failed_servers, headers):
             logger.error(f"An error occurred while retrying the backup request for server {server_id}: {str(e)}")
             notify_error() 
 
-server_ids = make_request()
+(server_ids, backup_limits) = make_request()
+remove_old_backups(backup_limits)
 backup_servers(server_ids)
