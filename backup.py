@@ -24,6 +24,7 @@ load_dotenv()
 API_KEY = f"Bearer {os.getenv('API_KEY')}"
 SERVERS_URL = os.getenv("SERVERS_URL")
 SEND_EMAILS = os.getenv("SEND_EMAILS", "True")  # Default to "True" if not set
+POST_BACKUP_SCRIPT = os.getenv("POST_BACKUP_SCRIPT") # optional
 
 # Instantiate EmailAlert object
 email_alert = EmailAlert(
@@ -137,6 +138,18 @@ def retry_failed_servers(failed_servers, headers):
             logger.error(f"An error occurred while retrying the backup request for server {server_id}: {str(e)}")
             notify_error() 
 
+def run_script(server_ids):
+    for server_id in server_ids:
+        exit_status = os.system(f"sh {POST_BACKUP_SCRIPT} {server_id}") 
+        if exit_status == 0:
+            logger.info(f"post backup script: success")
+        else:
+            logger.error(f"post backup script: failed with exit status {exit_status}")
+
+
 (server_ids, backup_limits) = make_request()
 remove_old_backups(backup_limits)
 backup_servers(server_ids)
+
+if POST_BACKUP_SCRIPT:
+    run_script(server_ids)
