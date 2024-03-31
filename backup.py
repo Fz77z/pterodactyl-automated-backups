@@ -24,6 +24,7 @@ load_dotenv()
 API_KEY = f"Bearer {os.getenv('API_KEY')}"
 SERVERS_URL = os.getenv("SERVERS_URL")
 SEND_EMAILS = os.getenv("SEND_EMAILS", "True")  # Default to "True" if not set
+ROTATE = os.getenv("ROTATE", "False")  # Default to "False" if not set
 POST_BACKUP_SCRIPT = os.getenv("POST_BACKUP_SCRIPT") # optional
 
 # Instantiate EmailAlert object
@@ -165,6 +166,7 @@ def run_script(server_id, backup_uuid):
         logger.error(f"post backup script: failed with exit status {exit_status}")
 
 (server_ids, backup_limits) = make_request()
-remove_old_backups(backup_limits)
+if ROTATE.lower() == "true":
+    remove_old_backups(backup_limits)
 backup_servers(server_ids)
 
