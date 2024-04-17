@@ -1,5 +1,5 @@
 import smtplib
-import logging
+from setup import logger
 from email.message import EmailMessage
 
 class EmailAlert:
@@ -17,7 +17,7 @@ class EmailAlert:
         if not all(isinstance(i, str) for i in [subject, body, to_email, self.from_email, self.from_password]):
             raise ValueError("All parameters must be of type str")
 
-        logging.info(f"Preparing to send email to {self.anonymize_email(to_email)}")
+        logger.info(f"Preparing to send email to {self.anonymize_email(to_email)}")
 
         # Create the email message
         msg = EmailMessage()
@@ -36,8 +36,8 @@ class EmailAlert:
 
                 # Send the email
                 server.send_message(msg)
-                logging.info(f"Email sent to {self.anonymize_email(to_email)}")
+                logger.info(f"Email sent to {self.anonymize_email(to_email)}")
         except smtplib.SMTPException as e:
-            logging.error(f"SMTP error occurred when sending email to {self.anonymize_email(to_email)}: {e}")
+            logger.error(f"SMTP error occurred when sending email to {self.anonymize_email(to_email)}: {e}")
         except Exception as e:
-            logging.error(f"Unexpected error occurred when sending email to {self.anonymize_email(to_email)}: {e}")
+            logger.error(f"Unexpected error occurred when sending email to {self.anonymize_email(to_email)}: {e}")

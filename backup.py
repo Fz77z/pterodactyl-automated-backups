@@ -1,26 +1,10 @@
 import os
 import time
-import logging
 import requests
+from setup import logger
 from api_request import main as make_request
-from dotenv import load_dotenv
 from alert import EmailAlert
 
-# Configure the logging to output to a file
-log_file = 'backup.log'
-log_format = '%(levelname)s - %(message)s'
-logging.basicConfig(filename=log_file, level=logging.INFO, format=log_format, filemode='a')  # 'a' stands for append
-
-log_format = '%(levelname)s - %(message)s'
-logging.basicConfig(level=logging.INFO, format=log_format)
-logger = logging.getLogger(__name__)
-handler = logging.FileHandler(log_file)
-handler.setLevel(logging.INFO)
-handler.setFormatter(logging.Formatter(log_format))
-logger.addHandler(handler)
-
-# Load environment variables
-load_dotenv()
 API_KEY = f"Bearer {os.getenv('API_KEY')}"
 SERVERS_URL = os.getenv("SERVERS_URL")
 SEND_EMAILS = os.getenv("SEND_EMAILS", "True")  # Default to "True" if not set
