@@ -41,93 +41,105 @@ if not SERVERS_URL:
     exit(1)
 
 # remove backups when limits reached
-def remove_old_backups(backup_limits):
-    logger.info(f"Backup limits: {backup_limits}")
+def remove_old_backup(server):
     headers = {"Authorization": API_KEY}
-    for server_id in backup_limits:
-        try:
-            url = f"{SERVERS_URL}{server_id}/backups"
-            response = requests.get(url, data='', headers=headers)
-             
-            if response.status_code == 200:
-                backups = sorted(response.json()['data'], key=lambda b: b['attributes']['created_at'])
+    server_id =  server['attributes']['identifier']
+    backup_limit = server['attributes']['feature_limits']['backups']
+    logger.info(f"  backup limit is {backup_limit}")
+    try:
+        url = f"{SERVERS_URL}{server_id}/backups"
+        response = requests.get(url, data='', headers=headers)
+        
+        if response.status_code == 200:
+            backups = sorted(response.json()['data'], key=lambda b: b['attributes']['created_at'])
 
-                if len(backups) >= backup_limits[server_id]:
-                    # backup limit reached
-                    # remove oldest N backups
-                    N = len(backups) - backup_limits[server_id] + 1
-                    
-                    for i in range(0,N):
-                        # delete oldest backup
+            if len(backups) >= backup_limit:
+                # backup limit reached
+                # remove oldest N backups
+                if backup_limit == 0:
+                    N = len(backups) # remove all backup
+                else:
+                    N = len(backups) - backup_limit + 1 # remove difference and leave space for one more
+                
+                for i in range(0,N):
+                    # delete oldest backup
+                    if backups[i]['attributes']['is_locked']:
+                        logger.warning(f"  backup {backups[i]['attributes']['name']} is locked, skipping")
+                    else:
                         url = f"{SERVERS_URL}{server_id}/backups/{backups[i]['attributes']['uuid']}"
-                        logger.info(f"deleting backup: \"{backups[i]['attributes']['name']}\", server: {server_id}")
+                        logger.info(f"  removing backup: \"{backups[i]['attributes']['name']}\"")
 
                         response = requests.delete(url, headers=headers)
                         if response.status_code == 204:
-                            logger.info("deleting backup: success")
+                            logger.info("  -> success")                                                        
                         else:
-                            logger.info(f"deleting backup: failed with status {response.status_code}")
+                            logger.info(f"  -> failed with status {response.status_code}")
 
-                        time.sleep(2)
-                else:
-                    logger.info(f"nothing to delete, server {server_id}")
+                    time.sleep(2)
             else:
-                logger.error(f"Getting backup info failed for server {server_id}. Error code: {response.status_code}")
-                time.sleep(30)
+                logger.info(f"  nothing to delete")
 
-        except requests.exceptions.RequestException as e:
-            logger.error(f"An error occurred while deleting backups from server {server_id}: {str(e)}")
 
-def backup_servers(server_ids):
+    except requests.exceptions.RequestException as e:
+        logger.error(f"An error occurred while deleting backups from server {server_id}: {str(e)}")
+
+def backup_servers(server_list):
     failed_servers = []
-    
-    if not server_ids:
-        logger.error("ERROR could not find servers eligible for backing up.")
-        notify_error()
-        return
-    
+        
     headers = {"Authorization": API_KEY}
 
-    for server_id in server_ids:
+    for server in server_list:
+        server_attr = server['attributes']
+        server_id = server_attr['identifier']
+        server_name = server_attr['name']
+        backup_limit = server['attributes']['feature_limits']['backups']
+
+        logger.info(f"processing server {server_id} '{server_name}'")
+
         try:
-            url = f"{SERVERS_URL}{server_id}/backups"
+            if ROTATE.lower() == "true":
+                remove_old_backup(server)
+
+            if backup_limit == 0:
+                logger.info("  skipping backup")
+                continue
+
+            url = f"{SERVERS_URL}{server_id}/backups"            
             response = requests.post(url, data='', headers=headers)
             if response.status_code == 200:
                 backup = response.json()
                 backup_uuid = backup['attributes']['uuid']
 
-                logger.info(f"backup started for server {server_id}")
+                logger.info(f"  backup started")
 
                 if POST_BACKUP_SCRIPT:
                     # we should only run this when the backup has been finished....
                     # this will prevent that the backups are made concurrently, thats OK, maybe it is 
                     # even better as it reduces overall load 
-                    logger.info(f"waiting for backup to finish...")
+                    logger.info(f"  waiting for backup to finish...")
                     while True:
                         response = requests.get(f'{url}/{backup_uuid}', data='', headers=headers)
 
                         if response.status_code == 200:
                             if response.json()['attributes']['completed_at']:                                
-                                logger.info("running post-backup script")
+                                logger.info("  running post-backup script")
                                 run_script(server_id, backup_uuid)
                                 break
                         else:
-                            logger.error(f"failed to get backup info, giving up to run post-backup script. Error code: {response.status_code} {response.text}")
+                            logger.error(f"  failed to get backup info, giving up to run post-backup script. Error code: {response.status_code} {response.text}")
                             break
 
                         time.sleep(10)
                 time.sleep(2)
             else:
                 failed_servers.append(server_id)
-                logger.error(f"Backup failed for server {server_id}. Error code: {response.status_code} {response.text}")
+                logger.error(f"  backup failed. Error code: {response.status_code} {response.text}")
                 time.sleep(30)
         except requests.exceptions.RequestException as e:
-            logger.error(f"An error occurred while making the backup request for server {server_id}: {str(e)}")
+            logger.error(f"  An error occurred while making the backup request: {str(e)}")
             failed_servers.append(server_id)
             time.sleep(30)
             
-    retry_failed_servers(failed_servers, headers)
-
 def retry_failed_servers(failed_servers, headers):
     for server_id in failed_servers:
         try:
@@ -135,22 +147,21 @@ def retry_failed_servers(failed_servers, headers):
             retry = requests.post(url, data='', headers=headers)
             
             if retry.status_code == 200:
-                logger.info(f"Retry succeeded for server {server_id}. Status code: {retry.status_code}")
+                logger.info(f"  Retry succeeded for server {server_id}. Status code: {retry.status_code}")
                 time.sleep(5)
             else:
-                logger.error(f"Retry failed for server {server_id}. Error code: {retry.status_code}")
+                logger.error(f"  Retry failed for server {server_id}. Error code: {retry.status_code}")
                 notify_error() 
         except requests.exceptions.RequestException as e:
-            logger.error(f"An error occurred while retrying the backup request for server {server_id}: {str(e)}")
+            logger.error(f"  An error occurred while retrying the backup request for server {server_id}: {str(e)}")
             notify_error() 
 
 def run_script(server_id, backup_uuid):
     exit_status = os.system(f"sh {POST_BACKUP_SCRIPT} {server_id} {backup_uuid}") 
     if exit_status > 0:
-        logger.error(f"post backup script: failed with exit status {exit_status}")
+        logger.error(f"  post backup script: failed with exit status {exit_status}")
 
-(server_ids, backup_limits) = make_request()
-if ROTATE.lower() == "true":
-    remove_old_backups(backup_limits)
-backup_servers(server_ids)
+server_list = make_request()
+
+backup_servers(server_list)
 

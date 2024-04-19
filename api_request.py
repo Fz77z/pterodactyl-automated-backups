@@ -50,20 +50,16 @@ def get_response(session):
 def process_response(response):
     try:
         if 'application/json' in response.headers['Content-Type']:
-            data = response.json()
-            server_identifiers = {item['attributes']['identifier'] for item in data['data']}
-            logger.info(f"Server identifiers: {server_identifiers}")
-            backup_limits = {item['attributes']['identifier']: item['attributes']['feature_limits']['backups'] for item in data['data']}
-           
-            return (server_identifiers, backup_limits)
+            server_info = response.json()['data']
+            return server_info
         else:
             logger.error("Received non-JSON response")
             raise ValueError("Received non-JSON response")
-    except (ValueError, KeyError):
-        logger.error("Error processing response")
-        raise
     except json.JSONDecodeError:
         logger.error("Error decoding JSON response")
+        raise
+    except (ValueError, KeyError):
+        logger.error("Error processing response")
         raise
 
 def main():
