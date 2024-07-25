@@ -15,7 +15,8 @@ Pterodactyl Automated Backups is a Python script that automates the process of c
 - **Email-support:** Sends optional email alerts to notify the administrator about backup failures.
 - **Detailed-logging:** Logs backup events and errors to a file for easy troubleshooting.
 - **Any-type:** Supports both s3 and filesystem backups.
-
+- **Backup-rotation** Removes older backups when backup limit is reached (filesystem backups only).
+- **Post-backup-script** Can run a custom shell script after each successful backup.
 
 ## Prerequisites
 
