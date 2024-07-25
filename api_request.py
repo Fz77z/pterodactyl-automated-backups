@@ -1,20 +1,11 @@
 import os
 import time
 import json
-import logging
-from logging.handlers import RotatingFileHandler
 import requests
-from dotenv import load_dotenv
+
+from setup import logger
 from http import HTTPStatus
 
-# Constants
-LOG_FILE = 'backup.log'
-LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
-MAX_LOG_FILE_BYTES = 500000
-BACKUP_COUNT = 2
-
-# Load and validate environment variables
-load_dotenv()
 API_KEY = os.getenv("API_KEY")
 GET_URL = os.getenv("GET_URL")
 MAX_RETRIES = int(os.getenv("MAX_RETRIES", 5))
@@ -24,14 +15,6 @@ if not API_KEY:
     raise ValueError("API key not found. Please set the API_KEY environment variable.")
 if not GET_URL:
     raise ValueError("URL not found. Please set the GET_URL environment variable.")
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-logger = logging.getLogger(__name__)
-handler = RotatingFileHandler(LOG_FILE, maxBytes=MAX_LOG_FILE_BYTES, backupCount=BACKUP_COUNT)
-handler.setLevel(logging.INFO)
-handler.setFormatter(logging.Formatter(LOG_FORMAT))
-logger.addHandler(handler)
 
 def get_session(api_key):
     session = requests.Session()
@@ -67,18 +50,16 @@ def get_response(session):
 def process_response(response):
     try:
         if 'application/json' in response.headers['Content-Type']:
-            data = response.json()
-            server_identifiers = {item['attributes']['identifier'] for item in data['data']}
-            logger.info(f"Server identifiers: {server_identifiers}")
-            return server_identifiers
+            server_info = response.json()['data']
+            return server_info
         else:
             logger.error("Received non-JSON response")
             raise ValueError("Received non-JSON response")
-    except (ValueError, KeyError):
-        logger.error("Error processing response")
-        raise
     except json.JSONDecodeError:
         logger.error("Error decoding JSON response")
+        raise
+    except (ValueError, KeyError):
+        logger.error("Error processing response")
         raise
 
 def main():
