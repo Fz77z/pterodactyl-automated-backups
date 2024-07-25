@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 from http import HTTPStatus
 
 # Constants
-LOG_FILE = 'backup.log'
-LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
+LOG_FILE = "backup.log"
+LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 MAX_LOG_FILE_BYTES = 500000
 BACKUP_COUNT = 2
 
@@ -28,28 +28,34 @@ if not GET_URL:
 # Configure logging
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
-handler = RotatingFileHandler(LOG_FILE, maxBytes=MAX_LOG_FILE_BYTES, backupCount=BACKUP_COUNT)
+handler = RotatingFileHandler(
+    LOG_FILE, maxBytes=MAX_LOG_FILE_BYTES, backupCount=BACKUP_COUNT
+)
 handler.setLevel(logging.INFO)
 handler.setFormatter(logging.Formatter(LOG_FORMAT))
 logger.addHandler(handler)
+
 
 def get_session(api_key):
     session = requests.Session()
     session.headers.update({"Authorization": f"Bearer {api_key}"})
     return session
 
+
 def get_response(session):
     for retry in range(MAX_RETRIES):
         try:
             response = session.get(GET_URL)
             if response.status_code == HTTPStatus.OK:
-                if 'application/json' in response.headers['Content-Type']:
+                if "application/json" in response.headers["Content-Type"]:
                     return response
                 else:
                     logger.error("Invalid API Key - received non-JSON response")
                     raise ValueError("Invalid API Key")
             else:
-                logger.error(f"Error: {response.status_code} - {HTTPStatus(response.status_code).phrase}")
+                logger.error(
+                    f"Error: {response.status_code} - {HTTPStatus(response.status_code).phrase}"
+                )
                 raise requests.exceptions.HTTPError(response.status_code)
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
             logger.error(f"Network Error: {str(e)}")
@@ -63,12 +69,13 @@ def get_response(session):
             raise requests.exceptions.RetryError("Max retries exceeded.")
 
 
-
 def process_response(response):
     try:
-        if 'application/json' in response.headers['Content-Type']:
+        if "application/json" in response.headers["Content-Type"]:
             data = response.json()
-            server_identifiers = {item['attributes']['identifier'] for item in data['data']}
+            server_identifiers = {
+                item["attributes"]["identifier"] for item in data["data"]
+            }
             logger.info(f"Server identifiers: {server_identifiers}")
             return server_identifiers
         else:
@@ -81,10 +88,12 @@ def process_response(response):
         logger.error("Error decoding JSON response")
         raise
 
+
 def main():
     with get_session(API_KEY) as session:
         response = get_response(session)
         return process_response(response)
+
 
 if __name__ == "__main__":
     try:

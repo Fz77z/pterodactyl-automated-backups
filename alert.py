@@ -2,6 +2,7 @@ import smtplib
 import logging
 from email.message import EmailMessage
 
+
 class EmailAlert:
     def __init__(self, from_email, from_password, smtp_server, smtp_port):
         self.from_email = from_email
@@ -10,11 +11,14 @@ class EmailAlert:
         self.smtp_port = int(smtp_port)
 
     def anonymize_email(self, email):
-        local_part, domain = email.split('@')
+        local_part, domain = email.split("@")
         return f"{'*' * len(local_part)}@{domain}"
 
     def send(self, subject, body, to_email):
-        if not all(isinstance(i, str) for i in [subject, body, to_email, self.from_email, self.from_password]):
+        if not all(
+            isinstance(i, str)
+            for i in [subject, body, to_email, self.from_email, self.from_password]
+        ):
             raise ValueError("All parameters must be of type str")
 
         logging.info(f"Preparing to send email to {self.anonymize_email(to_email)}")
@@ -22,9 +26,9 @@ class EmailAlert:
         # Create the email message
         msg = EmailMessage()
         msg.set_content(body)
-        msg['Subject'] = subject
-        msg['From'] = self.from_email
-        msg['To'] = to_email
+        msg["Subject"] = subject
+        msg["From"] = self.from_email
+        msg["To"] = to_email
 
         try:
             # Connect to the mail server using TLS
@@ -38,6 +42,10 @@ class EmailAlert:
                 server.send_message(msg)
                 logging.info(f"Email sent to {self.anonymize_email(to_email)}")
         except smtplib.SMTPException as e:
-            logging.error(f"SMTP error occurred when sending email to {self.anonymize_email(to_email)}: {e}")
+            logging.error(
+                f"SMTP error occurred when sending email to {self.anonymize_email(to_email)}: {e}"
+            )
         except Exception as e:
-            logging.error(f"Unexpected error occurred when sending email to {self.anonymize_email(to_email)}: {e}")
+            logging.error(
+                f"Unexpected error occurred when sending email to {self.anonymize_email(to_email)}: {e}"
+            )

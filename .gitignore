@@ -3,3 +3,4 @@
 pycache*
 __pycache__*
 backup.log*
+.idea/
