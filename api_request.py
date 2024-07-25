@@ -16,23 +16,27 @@ if not API_KEY:
 if not GET_URL:
     raise ValueError("URL not found. Please set the GET_URL environment variable.")
 
+
 def get_session(api_key):
     session = requests.Session()
     session.headers.update({"Authorization": f"Bearer {api_key}"})
     return session
+
 
 def get_response(session):
     for retry in range(MAX_RETRIES):
         try:
             response = session.get(GET_URL)
             if response.status_code == HTTPStatus.OK:
-                if 'application/json' in response.headers['Content-Type']:
+                if "application/json" in response.headers["Content-Type"]:
                     return response
                 else:
                     logger.error("Invalid API Key - received non-JSON response")
                     raise ValueError("Invalid API Key")
             else:
-                logger.error(f"Error: {response.status_code} - {HTTPStatus(response.status_code).phrase}")
+                logger.error(
+                    f"Error: {response.status_code} - {HTTPStatus(response.status_code).phrase}"
+                )
                 raise requests.exceptions.HTTPError(response.status_code)
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
             logger.error(f"Network Error: {str(e)}")
@@ -46,11 +50,10 @@ def get_response(session):
             raise requests.exceptions.RetryError("Max retries exceeded.")
 
 
-
 def process_response(response):
     try:
-        if 'application/json' in response.headers['Content-Type']:
-            server_info = response.json()['data']
+        if "application/json" in response.headers["Content-Type"]:
+            server_info = response.json()["data"]
             return server_info
         else:
             logger.error("Received non-JSON response")
@@ -62,10 +65,12 @@ def process_response(response):
         logger.error("Error processing response")
         raise
 
+
 def main():
     with get_session(API_KEY) as session:
         response = get_response(session)
         return process_response(response)
+
 
 if __name__ == "__main__":
     try:

@@ -8,10 +8,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Logger
-LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
+LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 MAX_LOG_FILE_BYTES = 500000
 BACKUP_COUNT = 15
-LOG_LEVEL= logging.__getattribute__(os.getenv('LOG_LEVEL') or 'ERROR')
+LOG_LEVEL = logging.__getattribute__(os.getenv("LOG_LEVEL") or "ERROR")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -23,10 +23,9 @@ handler.setFormatter(logging.Formatter(LOG_FORMAT))
 logger.addHandler(handler)
 
 # file logger
-handler = RotatingFileHandler('backup.log', maxBytes=MAX_LOG_FILE_BYTES, backupCount=BACKUP_COUNT)
-handler.setLevel(logging.INFO) # log file log level is always INFO
+handler = RotatingFileHandler(
+    "backup.log", maxBytes=MAX_LOG_FILE_BYTES, backupCount=BACKUP_COUNT
+)
+handler.setLevel(logging.INFO)  # log file log level is always INFO
 handler.setFormatter(logging.Formatter(LOG_FORMAT))
 logger.addHandler(handler)
-
-
-
