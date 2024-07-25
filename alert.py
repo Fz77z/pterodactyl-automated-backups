@@ -1,5 +1,5 @@
 import smtplib
-from setup import logger
+from common import logger
 from email.message import EmailMessage
 
 
