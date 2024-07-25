@@ -49,7 +49,7 @@ if not SERVERS_URL:
 
 # remove backups when limits reached
 def remove_old_backup(server):
-    headers = {"Authorization": "Bearer " + API_KEY}
+    headers = {"Authorization": API_KEY}
     server_id = server["attributes"]["identifier"]
     backup_limit = server["attributes"]["feature_limits"]["backups"]
     logger.info(f"  backup limit is {backup_limit}")
@@ -105,7 +105,7 @@ def remove_old_backup(server):
 def backup_servers(server_list):
     failed_servers = []
 
-    headers = {"Authorization": "Bearer " + API_KEY}
+    headers = {"Authorization": API_KEY}
 
     for server in server_list:
         server_attr = server["attributes"]
