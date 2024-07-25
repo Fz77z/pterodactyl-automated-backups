@@ -1,5 +1,6 @@
 import os
 import time
+from pprint import pprint
 
 import requests
 
@@ -56,6 +57,8 @@ def remove_old_backup(server):
 
 def backup_servers(server_list):
     failed_servers = []
+
+    server_list = server_list["data"]
 
     for server in server_list:
         server_attr = server["attributes"]

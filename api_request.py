@@ -37,9 +37,14 @@ def request(url, method: str = "GET", data=None) -> dict:
     for retry in range(MAX_RETRIES):
         try:
             response = get_session().request(method=method, url=url, data=data)
+            if not response:
+                raise requests.exceptions.RequestException(response.json()["errors"][0]["detail"])
+
             response.raise_for_status()
             return response.json()
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
             logger.error(f"Network Error: {str(e)}")
+            exit(1)
         except requests.exceptions.RequestException as e:
             logger.error(f"Request Exception: {str(e)}")
+            exit(1)
