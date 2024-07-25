@@ -1,11 +1,13 @@
+import logging
 import os
 import time
-from pprint import pprint
 
 import requests
 
 from api_request import request
-from common import GET_URL, POST_BACKUP_SCRIPT, ROTATE, SERVERS_URL, logger
+from config import GET_URL, POST_BACKUP_SCRIPT, ROTATE, SERVERS_URL
+
+logger = logging.getLogger(__name__)
 
 
 # remove backups when limits reached
@@ -17,9 +19,7 @@ def remove_old_backup(server):
         url = f"{SERVERS_URL}{server_id}/backups"
         response = request(url)
 
-        backups = sorted(
-            response["data"], key=lambda b: b["attributes"]["created_at"]
-        )
+        backups = sorted(response["data"], key=lambda b: b["attributes"]["created_at"])
 
         if len(backups) >= backup_limit:
             # backup limit reached
@@ -43,7 +43,7 @@ def remove_old_backup(server):
                         f"  removing backup: \"{backups[i]['attributes']['name']}\""
                     )
 
-                    request(url, method='DELETE')
+                    request(url, method="DELETE")
 
                 time.sleep(2)
         else:
@@ -55,12 +55,12 @@ def remove_old_backup(server):
         )
 
 
-def backup_servers(server_list):
+def backup_servers(all_servers):
     failed_servers = []
 
-    server_list = server_list["data"]
+    all_servers = all_servers["data"]
 
-    for server in server_list:
+    for server in all_servers:
         server_attr = server["attributes"]
         server_id = server_attr["identifier"]
         server_name = server_attr["name"]
@@ -77,14 +77,14 @@ def backup_servers(server_list):
                 continue
 
             url = f"{SERVERS_URL}{server_id}/backups"
-            backup = request(url, method='POST')
+            backup = request(url, method="POST")
             backup_uuid = backup["attributes"]["uuid"]
 
             logger.info("  backup started")
 
             if POST_BACKUP_SCRIPT:
                 # we should only run this when the backup has been finished....
-                # this will prevent that the backups are made concurrently, thats OK, maybe it is
+                # this will prevent that the backups are made concurrently, that's OK, maybe it is
                 # even better as it reduces overall load
                 logger.info("  waiting for backup to finish...")
                 while True:
@@ -111,6 +111,6 @@ def run_script(server_id, backup_uuid):
         logger.error(f"  post backup script: failed with exit status {exit_status}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     server_list = request(GET_URL)
     backup_servers(server_list)
