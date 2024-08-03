@@ -31,21 +31,35 @@ def remove_old_backup(server):
                     len(backups) - backup_limit + 1
                 )  # remove difference and leave space for one more
 
-            for i in range(n):
+            to_delete = n
+            i = 0
+
+            while to_delete > 0 and i < len(backups):
+                backup = backups[i]
+                i += 1
+
                 # delete oldest backup
-                if backups[i]["attributes"]["is_locked"]:
+                if backup["attributes"]["is_locked"]:
                     logger.warning(
-                        f"  backup {backups[i]['attributes']['name']} is locked, skipping"
+                        f"  backup {backup['attributes']['name']} is locked, skipping"
                     )
                 else:
-                    url = f"{SERVERS_URL}{server_id}/backups/{backups[i]['attributes']['uuid']}"
+                    url = f"{SERVERS_URL}{server_id}/backups/{backup['attributes']['uuid']}"
                     logger.info(
-                        f"  removing backup: \"{backups[i]['attributes']['name']}\""
+                        f"  removing backup: \"{backup['attributes']['name']}\""
                     )
 
                     request(url, method="DELETE")
+                    time.sleep(2)
 
-                time.sleep(2)
+                    to_delete -= 1
+
+            if to_delete > 0:
+                logger.error(
+                    "Failed to find enough backups to delete. I still need to delete %d...",
+                    to_delete,
+                )
+
         else:
             logger.info("  nothing to delete")
 
@@ -98,9 +112,7 @@ def backup_servers(all_servers):
                     time.sleep(10)
             time.sleep(2)
         except requests.exceptions.RequestException as e:
-            logger.error(
-                f"  An error occurred while making the backup request: {e}"
-            )
+            logger.error(f"  An error occurred while making the backup request: {e}")
             failed_servers.append(server_id)
             time.sleep(30)
 
