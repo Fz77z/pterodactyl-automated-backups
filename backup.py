@@ -51,7 +51,7 @@ def remove_old_backup(server):
 
     except requests.exceptions.RequestException as e:
         logger.error(
-            f"An error occurred while deleting backups from server {server_id}: {str(e)}"
+            f"An error occurred while deleting backups from server {server_id}: {e}"
         )
 
 
@@ -99,7 +99,7 @@ def backup_servers(all_servers):
             time.sleep(2)
         except requests.exceptions.RequestException as e:
             logger.error(
-                f"  An error occurred while making the backup request: {str(e)}"
+                f"  An error occurred while making the backup request: {e}"
             )
             failed_servers.append(server_id)
             time.sleep(30)

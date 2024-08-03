@@ -1,10 +1,11 @@
 from functools import lru_cache
+from logging import getLogger
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from common import API_KEY, MAX_RETRIES, RETRY_BACKOFF_FACTOR, logger
+from config import API_KEY, MAX_RETRIES, RETRY_BACKOFF_FACTOR
 
 
 __all__ = ["request"]
@@ -46,8 +47,8 @@ def request(url, method: str = "GET", data=None) -> dict:
 
             return response.json()
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
-            logger.error(f"Network Error: {str(e)}")
+            getLogger(__name__).error(f"Network Error: {e}")
             exit(1)
         except requests.exceptions.RequestException as e:
-            logger.error(f"Request Exception: {str(e)}")
+            getLogger(__name__).error(f"Request Exception: {e}")
             exit(1)
