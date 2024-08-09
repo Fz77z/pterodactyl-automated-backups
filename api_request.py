@@ -45,10 +45,16 @@ def request(url, method: str = "GET", data=None) -> dict:
                     response.json()["errors"][0]["detail"]
                 )
 
-            return response.json()
+            return response.json() if response.content else {}
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
             getLogger(__name__).error(f"Network Error: {e}")
+            getLogger(__name__).error(f"   --> URL: {url}")
+            getLogger(__name__).error(f"   --> method: {method}")
+            getLogger(__name__).error(f"   --> data: {data}")
             exit(1)
         except requests.exceptions.RequestException as e:
             getLogger(__name__).error(f"Request Exception: {e}")
+            getLogger(__name__).error(f"   --> URL: {url}")
+            getLogger(__name__).error(f"   --> method: {method}")
+            getLogger(__name__).error(f"   --> data: {data}")
             exit(1)
