@@ -1,6 +1,8 @@
 from functools import lru_cache
-from logging import getLogger
+from typing import Dict, Any, Optional
+import time
 
+from logprise import logger
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
@@ -12,7 +14,8 @@ __all__ = ["request"]
 
 
 @lru_cache(1)
-def _get_session():
+def _get_session() -> requests.Session:
+    """Create and configure a requests Session with retry strategy."""
     retry_strategy = Retry(
         total=MAX_RETRIES,
         backoff_factor=RETRY_BACKOFF_FACTOR,
@@ -33,28 +36,63 @@ def _get_session():
     session.mount("https://", adapter)
     session.mount("http://", adapter)
 
+    logger.debug(f"Created requests session with {MAX_RETRIES} retries, backoff factor {RETRY_BACKOFF_FACTOR}")
     return session
 
 
-def request(url, method: str = "GET", data=None) -> dict:
+def request(url: str, method: str = "GET", data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Make an API request with retry capability.
+
+    Returns JSON response or empty dict if no content.
+    Exits on network or request errors after MAX_RETRIES.
+    """
+    method = method.upper()
+    request_id = f"{method}:{url[-30:]}"
+
+    logger.debug(f"[{request_id}] Making {method} request")
+    start_time = time.time()
+
     for retry in range(MAX_RETRIES):
         try:
-            response = _get_session().request(method=method, url=url, data=data)
-            if not response:
+            if retry > 0:
+                logger.info(f"[{request_id}] Retry attempt {retry}/{MAX_RETRIES}")
+
+            response = _get_session().request(method=method, url=url, json=data)
+            elapsed = time.time() - start_time
+
+            if response.status_code >= 400:
+                error_info = response.json().get("errors", [{"detail": "Unknown error"}])[0]["detail"]
+                logger.error(f"[{request_id}] API returned error {response.status_code}: {error_info}")
+                raise requests.exceptions.RequestException(error_info)
+
+            if not response.ok:
+                logger.error(f"[{request_id}] Failed with status {response.status_code}")
                 raise requests.exceptions.RequestException(
-                    response.json()["errors"][0]["detail"]
+                    f"Request failed with status {response.status_code}"
                 )
 
-            return response.json() if response.content else {}
+            result = response.json() if response.content else {}
+            logger.debug(f"[{request_id}] Success in {elapsed:.3f}s (size: {len(response.content)} bytes)")
+            return result
+
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
-            getLogger(__name__).error(f"Network Error: {e}")
-            getLogger(__name__).error(f"   --> URL: {url}")
-            getLogger(__name__).error(f"   --> method: {method}")
-            getLogger(__name__).error(f"   --> data: {data}")
-            exit(1)
+            logger.error(f"[{request_id}] Network Error: {e}")
+            logger.error(f"[{request_id}] URL: {url}")
+            logger.error(f"[{request_id}] Method: {method}")
+            if data:
+                logger.error(f"[{request_id}] Data: {data}")
+
+            if retry == MAX_RETRIES - 1:
+                logger.critical(f"[{request_id}] Max retries exceeded, exiting")
+                exit(1)
+
         except requests.exceptions.RequestException as e:
-            getLogger(__name__).error(f"Request Exception: {e}")
-            getLogger(__name__).error(f"   --> URL: {url}")
-            getLogger(__name__).error(f"   --> method: {method}")
-            getLogger(__name__).error(f"   --> data: {data}")
-            exit(1)
+            logger.error(f"[{request_id}] Request Exception: {e}")
+            logger.error(f"[{request_id}] URL: {url}")
+            logger.error(f"[{request_id}] Method: {method}")
+            if data:
+                logger.error(f"[{request_id}] Data: {data}")
+
+            if retry == MAX_RETRIES - 1:
+                logger.critical(f"[{request_id}] Max retries exceeded, exiting")
+                exit(1)
