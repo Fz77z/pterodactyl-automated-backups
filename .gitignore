@@ -5,3 +5,5 @@ __pycache__*
 backup.log*
 venv/
 .idea/
+*.log
+
