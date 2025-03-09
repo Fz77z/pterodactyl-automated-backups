@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional
 import time
 
 from logprise import logger
@@ -34,11 +34,15 @@ def _get_session() -> requests.Session:
     session.mount("https://", adapter)
     session.mount("http://", adapter)
 
-    logger.debug(f"Created requests session with {MAX_RETRIES} retries, backoff factor {RETRY_BACKOFF_FACTOR}")
+    logger.debug(
+        f"Created requests session with {MAX_RETRIES} retries, backoff factor {RETRY_BACKOFF_FACTOR}"
+    )
     return session
 
 
-def _make_single_request(url: str, method: str, data: Optional[Dict[str, Any]], request_id: str) -> Dict[str, Any]:
+def _make_single_request(
+    url: str, method: str, data: Optional[Dict[str, Any]], request_id: str
+) -> Dict[str, Any]:
     """Execute a single API request with retry capability."""
     start_time = time.time()
 
@@ -51,19 +55,33 @@ def _make_single_request(url: str, method: str, data: Optional[Dict[str, Any]], 
             elapsed = time.time() - start_time
 
             if response.status_code >= 400:
-                error_info = response.json().get("errors", [{"detail": "Unknown error"}])[0]["detail"]
-                logger.error(f"[{request_id}] API returned error {response.status_code}: {error_info}")
+                error_info = response.json().get(
+                    "errors", [{"detail": "Unknown error"}]
+                )[0]["detail"]
+                logger.error(
+                    f"[{request_id}] API returned error {response.status_code}: {error_info}"
+                )
                 raise requests.exceptions.RequestException(error_info)
 
             if not response.ok:
-                logger.error(f"[{request_id}] Failed with status {response.status_code}")
-                raise requests.exceptions.RequestException(f"Request failed with status {response.status_code}")
+                logger.error(
+                    f"[{request_id}] Failed with status {response.status_code}"
+                )
+                raise requests.exceptions.RequestException(
+                    f"Request failed with status {response.status_code}"
+                )
 
             result = response.json() if response.content else {}
-            logger.debug(f"[{request_id}] Success in {elapsed:.3f}s (size: {len(response.content)} bytes)")
+            logger.debug(
+                f"[{request_id}] Success in {elapsed:.3f}s (size: {len(response.content)} bytes)"
+            )
             return result
 
-        except (requests.exceptions.RequestException, requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+        except (
+            requests.exceptions.RequestException,
+            requests.exceptions.Timeout,
+            requests.exceptions.ConnectionError,
+        ) as e:
             logger.error(f"[{request_id}] Request Error: {e}")
             logger.error(f"[{request_id}] URL: {url}")
             logger.error(f"[{request_id}] Method: {method}")
@@ -86,9 +104,14 @@ def _get_next_page_url(base_url: str, current_page: int) -> str:
         return f"{base_url}?page={current_page}"
 
 
-def request(url: str, method: str = "GET", data: Optional[Dict[str, Any]] = None, fetch_all_pages: bool = True) -> Dict[str, Any]:
+def request(
+    url: str,
+    method: str = "GET",
+    data: Optional[Dict[str, Any]] = None,
+    fetch_all_pages: bool = True,
+) -> Dict[str, Any]:
     """Make API request(s) with pagination support.
-    
+
     Returns JSON response or empty dict if no content.
     When fetch_all_pages=True, automatically fetches all paginated data.
     """
@@ -96,8 +119,8 @@ def request(url: str, method: str = "GET", data: Optional[Dict[str, Any]] = None
     request_id = f"{method}:{url[-30:]}"
     logger.debug(f"[{request_id}] Making {method} request")
 
-    if 'per_page' not in data:
-        data['per_page'] = 100
+    if "per_page" not in data:
+        data["per_page"] = 100
 
     all_data = None
     current_url = url
@@ -107,7 +130,12 @@ def request(url: str, method: str = "GET", data: Optional[Dict[str, Any]] = None
         result = _make_single_request(current_url, method, data, request_id)
 
         # Handle pagination
-        if fetch_all_pages and "data" in result and "meta" in result and "pagination" in result["meta"]:
+        if (
+            fetch_all_pages
+            and "data" in result
+            and "meta" in result
+            and "pagination" in result["meta"]
+        ):
             pagination = result["meta"]["pagination"]
 
             # Initialize all_data on first page
@@ -123,7 +151,9 @@ def request(url: str, method: str = "GET", data: Optional[Dict[str, Any]] = None
             if current_page < pagination["total_pages"]:
                 current_page += 1
                 current_url = _get_next_page_url(url, current_page)
-                logger.debug(f"[{request_id}] Fetching page {current_page}/{pagination['total_pages']}")
+                logger.debug(
+                    f"[{request_id}] Fetching page {current_page}/{pagination['total_pages']}"
+                )
             else:
                 return all_data
         else:

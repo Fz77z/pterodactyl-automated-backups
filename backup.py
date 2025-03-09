@@ -15,7 +15,9 @@ def remove_old_backup(server: Dict[str, Any]) -> None:
     backup_limit = server["attributes"]["feature_limits"]["backups"]
     server_name = server["attributes"]["name"]
 
-    logger.info(f"[{server_id}] Checking backups for '{server_name}' (limit: {backup_limit})")
+    logger.info(
+        f"[{server_id}] Checking backups for '{server_name}' (limit: {backup_limit})"
+    )
 
     if server_id != "339ff417":
         return
@@ -33,23 +35,29 @@ def remove_old_backup(server: Dict[str, Any]) -> None:
                 logger.info(f"[{server_id}] Removing all {to_delete} backups")
             else:
                 to_delete = backup_count - backup_limit + 1
-                logger.info(f"[{server_id}] Need to remove {to_delete} backup(s) to stay under limit")
+                logger.info(
+                    f"[{server_id}] Need to remove {to_delete} backup(s) to stay under limit"
+                )
 
             i = 0
             deleted = 0
 
             while to_delete > 0 and i < backup_count:
                 backup = backups[i]
-                backup_name = backup['attributes']['name']
-                backup_uuid = backup['attributes']['uuid']
+                backup_name = backup["attributes"]["name"]
+                backup_uuid = backup["attributes"]["uuid"]
                 i += 1
 
                 if backup["attributes"]["is_locked"]:
-                    logger.warning(f"[{server_id}] Backup '{backup_name}' is locked, skipping")
+                    logger.warning(
+                        f"[{server_id}] Backup '{backup_name}' is locked, skipping"
+                    )
                     continue
 
                 url = f"{SERVERS_URL}{server_id}/backups/{backup_uuid}"
-                logger.info(f"[{server_id}] Removing backup: '{backup_name}' (UUID: {backup_uuid})")
+                logger.info(
+                    f"[{server_id}] Removing backup: '{backup_name}' (UUID: {backup_uuid})"
+                )
 
                 request(url, method="DELETE")
                 deleted += 1
@@ -62,7 +70,9 @@ def remove_old_backup(server: Dict[str, Any]) -> None:
                     f"deleted {deleted}, {backup_count-deleted} remain"
                 )
         else:
-            logger.info(f"[{server_id}] No backups need removal ({backup_count}/{backup_limit})")
+            logger.info(
+                f"[{server_id}] No backups need removal ({backup_count}/{backup_limit})"
+            )
 
     except requests.exceptions.RequestException as e:
         logger.error(f"[{server_id}] Error deleting backups: {e}")
@@ -109,13 +119,17 @@ def backup_servers(all_servers: Dict[str, Any]) -> List[str]:
 
                     if response["attributes"]["completed_at"]:
                         elapsed = time.time() - wait_start
-                        logger.info(f"[{server_id}] Backup completed after {elapsed:.1f}s, running post-backup script")
+                        logger.info(
+                            f"[{server_id}] Backup completed after {elapsed:.1f}s, running post-backup script"
+                        )
                         run_script(server_id, backup_uuid)
                         break
 
                     if completion_checks % 6 == 0:  # Log every minute
                         elapsed = time.time() - wait_start
-                        logger.info(f"[{server_id}] Still waiting for backup completion ({elapsed:.1f}s elapsed)")
+                        logger.info(
+                            f"[{server_id}] Still waiting for backup completion ({elapsed:.1f}s elapsed)"
+                        )
 
                     time.sleep(10)
 
@@ -128,9 +142,13 @@ def backup_servers(all_servers: Dict[str, Any]) -> List[str]:
             time.sleep(30)
 
     if failed_servers:
-        logger.error(f"Backup process completed with {len(failed_servers)} failures: {', '.join(failed_servers)}")
+        logger.error(
+            f"Backup process completed with {len(failed_servers)} failures: {', '.join(failed_servers)}"
+        )
     else:
-        logger.success(f"Backup process completed successfully for all {server_count} servers")
+        logger.success(
+            f"Backup process completed successfully for all {server_count} servers"
+        )
 
     return failed_servers
 
@@ -143,13 +161,17 @@ def run_script(server_id: str, backup_uuid: str) -> None:
     exit_status = os.system(script_cmd)
 
     if exit_status > 0:
-        logger.error(f"[{server_id}] Post-backup script failed with exit code {exit_status}")
+        logger.error(
+            f"[{server_id}] Post-backup script failed with exit code {exit_status}"
+        )
     else:
         logger.success(f"[{server_id}] Post-backup script completed successfully")
 
 
 if __name__ == "__main__":
-    logger.info(f"Backup script started, ROTATE={ROTATE}, POST_BACKUP_SCRIPT={POST_BACKUP_SCRIPT}")
+    logger.info(
+        f"Backup script started, ROTATE={ROTATE}, POST_BACKUP_SCRIPT={POST_BACKUP_SCRIPT}"
+    )
     try:
         server_list = request(GET_URL)
         server_count = len(server_list.get("data", []))

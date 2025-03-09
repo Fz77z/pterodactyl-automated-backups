@@ -1,8 +1,6 @@
 import importlib
 import os
-import sys
 import time
-from typing import Optional
 
 from logprise import logger, appriser
 
@@ -30,7 +28,15 @@ logger.add(
 )
 
 # Set global log level (filters at the sink level)
-if LOG_LEVEL not in ["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"]:
+if LOG_LEVEL not in [
+    "TRACE",
+    "DEBUG",
+    "INFO",
+    "SUCCESS",
+    "WARNING",
+    "ERROR",
+    "CRITICAL",
+]:
     logger.warning(f"Invalid LOG_LEVEL {LOG_LEVEL}, defaulting to INFO")
     LOG_LEVEL = "INFO"
 
@@ -48,7 +54,9 @@ def notify_error(error: str = "") -> None:
         logger.error("TO_EMAIL not set, can't send error notification")
         return
 
-    logger.info(f"Sending error notification: {error[:50]}{'...' if len(error) > 50 else ''}")
+    logger.info(
+        f"Sending error notification: {error[:50]}{'...' if len(error) > 50 else ''}"
+    )
 
     from_email = os.getenv("FROM_EMAIL", "")
     from_password = os.getenv("FROM_PASSWORD", "")
@@ -74,7 +82,9 @@ def _check_required(name: str) -> None:
     """Check that required configuration variables are set."""
     mod = importlib.import_module("config")
     if name not in mod.__dict__ or not mod.__dict__[name]:
-        err_msg = f"{name} environment variable missing. Please set it in your .env file."
+        err_msg = (
+            f"{name} environment variable missing. Please set it in your .env file."
+        )
         logger.error(err_msg)
         notify_error(err_msg)
         exit(1)
