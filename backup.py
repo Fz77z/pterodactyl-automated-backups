@@ -17,6 +17,9 @@ def remove_old_backup(server: Dict[str, Any]) -> None:
 
     logger.info(f"[{server_id}] Checking backups for '{server_name}' (limit: {backup_limit})")
 
+    if server_id != "339ff417":
+        return
+
     try:
         url = f"{SERVERS_URL}{server_id}/backups"
         response = request(url)
