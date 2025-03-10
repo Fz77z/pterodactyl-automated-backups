@@ -18,8 +18,10 @@ def remove_old_backup(server: Dict[str, Any]) -> None:
     logger.info(
         f"[{server_id}] Checking backups for '{server_name}' (limit: {backup_limit})"
     )
-
-    if server_id != "339ff417":
+    if backup_limit == 0:
+        logger.info(
+            f"[{server_id}] ==> No backups needed for this server"
+        )
         return
 
     try:
@@ -30,14 +32,10 @@ def remove_old_backup(server: Dict[str, Any]) -> None:
 
         if backup_count >= backup_limit:
             # Calculate how many backups to remove
-            if backup_limit == 0:
-                to_delete = backup_count
-                logger.info(f"[{server_id}] Removing all {to_delete} backups")
-            else:
-                to_delete = backup_count - backup_limit + 1
-                logger.info(
-                    f"[{server_id}] Need to remove {to_delete} backup(s) to stay under limit"
-                )
+            to_delete = backup_count - backup_limit + 1
+            logger.info(
+                f"[{server_id}] Need to remove {to_delete} backup(s) to stay under limit"
+            )
 
             i = 0
             deleted = 0
@@ -103,7 +101,7 @@ def backup_servers(all_servers: Dict[str, Any]) -> List[str]:
                 continue
 
             url = f"{SERVERS_URL}{server_id}/backups"
-            backup = request(url, method="POST")
+            backup = request(url, method="POST", data={"per_page": 100})
             backup_uuid = backup["attributes"]["uuid"]
 
             logger.info(f"[{server_id}] Backup started (UUID: {backup_uuid})")
@@ -115,7 +113,7 @@ def backup_servers(all_servers: Dict[str, Any]) -> List[str]:
 
                 while True:
                     completion_checks += 1
-                    response = request(f"{url}/{backup_uuid}")
+                    response = request(f"{url}/{backup_uuid}", data={"per_page": 100})
 
                     if response["attributes"]["completed_at"]:
                         elapsed = time.time() - wait_start
@@ -173,7 +171,7 @@ if __name__ == "__main__":
         f"Backup script started, ROTATE={ROTATE}, POST_BACKUP_SCRIPT={POST_BACKUP_SCRIPT}"
     )
     try:
-        server_list = request(GET_URL)
+        server_list = request(GET_URL, data={"per_page": 100, "type": "admin"})
         server_count = len(server_list.get("data", []))
         logger.info(f"Retrieved {server_count} servers")
 

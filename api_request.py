@@ -119,9 +119,8 @@ def request(
     request_id = f"{method}:{url[-30:]}"
     logger.debug(f"[{request_id}] Making {method} request")
 
-    if method == "GET" and "per_page" not in data:
-        data = data or {}
-        data["per_page"] = 100
+    if method == "GET" and not data:
+        data = {"per_page": 100}
 
     all_data = None
     current_url = url
